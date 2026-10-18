@@ -3,10 +3,10 @@
 
 import os
 
-# Test hooks only: MARLIN_* scrubs to MARLIN_* publicly; in-repo tests use MARLIN_* safely.
-WINDOW_SIZE = int(os.environ.get("MARLIN_WINDOW", "100"))
-# Test hooks only: MARLIN_* scrubs to MARLIN_* publicly; in-repo tests use MARLIN_* safely.
-CHANNEL_FLOOR = int(os.environ.get("MARLIN_CHANNEL_FLOOR", "10"))
+# Test hook only.
+WINDOW_SIZE = int(os.environ.get("AMBYT_WINDOW", "100"))
+# Test hook only.
+CHANNEL_FLOOR = int(os.environ.get("AMBYT_CHANNEL_FLOOR", "10"))
 # A channel keeps its floor protection only while its newest signal is this recent.
 FLOOR_LIVENESS_DAYS = 21
 # Ordinary urgent entries per channel; deadline-radar mandatory additions are separate.

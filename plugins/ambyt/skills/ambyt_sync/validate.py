@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Marlin landscape validator — lint a written marlin_landscape.json against
+"""Ambyt landscape validator — lint a written ambyt_landscape.json against
 the skill's determinism rules.
 
-Reads the written artifact (`marlin_landscape.json`) AND ground truth
-(`marlin_state.json`) from the shared state directory (MARLIN_STATE_DIR,
-default ~/.marlin/), then checks every
+Reads the written artifact (`ambyt_landscape.json`) AND ground truth
+(`ambyt_state.json`) from the shared state directory (AMBYT_STATE_DIR,
+default ~/.ambyt/), then checks every
 rule from SKILL.md step 8/9 mechanically — so the agent doesn't rely on
 remembering to apply them by hand. The v2 landscape is channel-keyed; every
 per-channel rule runs within each `channels.<id>` section.
@@ -65,13 +65,13 @@ ALLOWED_ACK = {"urgent_signals": {"acknowledged"}, "notable_signals": {"acknowle
 ALLOWED_VIA = {"deadline"}
 SUPPRESSED_ACK = {"handled", "expired"}
 
-# Both files live in the shared state directory (MARLIN_STATE_DIR, else
-# ~/.marlin), the same one sync.py/inspect.py resolve — so the validator lints
+# Both files live in the shared state directory (AMBYT_STATE_DIR, else
+# ~/.ambyt), the same one sync.py/inspect.py resolve — so the validator lints
 # the landscape the skill actually wrote, regardless of cwd.
-STATE_DIR = Path(os.environ.get("MARLIN_STATE_DIR") or (Path.home() / ".marlin")).expanduser()
-STATE_PATH = STATE_DIR / "marlin_state.json"
-LANDSCAPE_PATH = STATE_DIR / "marlin_landscape.json"
-ARCHIVE_DIR = STATE_DIR / "marlin_archive"
+STATE_DIR = Path(os.environ.get("AMBYT_STATE_DIR") or (Path.home() / ".ambyt")).expanduser()
+STATE_PATH = STATE_DIR / "ambyt_state.json"
+LANDSCAPE_PATH = STATE_DIR / "ambyt_landscape.json"
+ARCHIVE_DIR = STATE_DIR / "ambyt_archive"
 AS_OF_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 

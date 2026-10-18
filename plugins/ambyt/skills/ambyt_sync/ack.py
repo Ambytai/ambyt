@@ -21,10 +21,10 @@ from params import ACK_EXPIRED_PRUNE_DAYS
 
 
 # Keep this expression exactly aligned with sync.py / inspect.py / assemble.py.
-STATE_DIR = Path(os.environ.get("MARLIN_STATE_DIR") or (Path.home() / ".marlin")).expanduser()
-STATE_PATH = STATE_DIR / "marlin_state.json"
-ACKS_PATH = STATE_DIR / "marlin_acks.json"
-ACKS_LOG_PATH = STATE_DIR / "marlin_acks_log.jsonl"
+STATE_DIR = Path(os.environ.get("AMBYT_STATE_DIR") or (Path.home() / ".ambyt")).expanduser()
+STATE_PATH = STATE_DIR / "ambyt_state.json"
+ACKS_PATH = STATE_DIR / "ambyt_acks.json"
+ACKS_LOG_PATH = STATE_DIR / "ambyt_acks_log.jsonl"
 _ACK_STATUSES = {"acknowledged", "handled", "expired"}
 
 
@@ -104,7 +104,7 @@ def deadline_has_passed(signal: dict, now: datetime | None = None) -> bool:
 
 def load_ack_store(state_dir: Path = STATE_DIR) -> dict:
     """Load the latest-state ack store, treating a missing file as empty."""
-    path = state_dir / "marlin_acks.json"
+    path = state_dir / "ambyt_acks.json"
     if not path.exists():
         return {"version": 1, "acks": {}}
     try:
@@ -125,7 +125,7 @@ def _save_ack_store(store: dict, state_dir: Path = STATE_DIR) -> None:
     within one filesystem, which is the part POSIX guarantees is atomic.
     """
     state_dir.mkdir(parents=True, exist_ok=True)
-    path = state_dir / "marlin_acks.json"
+    path = state_dir / "ambyt_acks.json"
     temp = path.with_name(path.name + f".tmp{os.getpid()}")
     try:
         with temp.open("w") as handle:
@@ -147,7 +147,7 @@ def _append_ledger(signal_id: str, record: dict, by: str, state_dir: Path = STAT
     """
     state_dir.mkdir(parents=True, exist_ok=True)
     entry = {"id": signal_id, **record, "by": by}
-    with (state_dir / "marlin_acks_log.jsonl").open("a") as ledger:
+    with (state_dir / "ambyt_acks_log.jsonl").open("a") as ledger:
         ledger.write(json.dumps(entry) + "\n")
         ledger.flush()
         os.fsync(ledger.fileno())
@@ -159,7 +159,7 @@ def _logged_system_transitions(state_dir: Path) -> set[tuple]:
     One pass over the append-only ledger, so callers that ask about many ids
     (the radar's expired-tail check) don't re-read the file per id.
     """
-    path = state_dir / "marlin_acks_log.jsonl"
+    path = state_dir / "ambyt_acks_log.jsonl"
     if not path.exists():
         return set()
     keys: set[tuple] = set()
@@ -432,7 +432,7 @@ def _list_records(status: str | None) -> list[tuple[str, dict]]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Record a Marlin signal acknowledgement.")
+    parser = argparse.ArgumentParser(description="Record a Ambyt signal acknowledgement.")
     parser.add_argument("signal_id", nargs="?")
     parser.add_argument("status", nargs="?", choices=("acknowledged", "handled"))
     parser.add_argument("--note")

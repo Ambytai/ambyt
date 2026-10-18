@@ -1,5 +1,5 @@
 {
-  "name": "marlin",
+  "name": "ambyt",
   "description": "Sync recent signals into local state and landscape files for ambient domain awareness.",
-  "version": "0.1.16"
+  "version": "0.2.0"
 }
