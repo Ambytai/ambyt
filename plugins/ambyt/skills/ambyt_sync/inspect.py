@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Marlin triage index — compact one-line-per-signal view of marlin_state.json.
+"""Ambyt triage index — compact one-line-per-signal view of ambyt_state.json.
 
-Default mode: read `marlin_state.json` and print one pipe-delimited line per
+Default mode: read `ambyt_state.json` and print one pipe-delimited line per
 signal, sorted by `updated_seq` descending:
 
     seq:<N> | <id> | <handling> | <imp>/<nov> | <signal_type> | <channel> | <title> | <tags>
@@ -60,14 +60,14 @@ skill's rules require, so the agent doesn't do it by hand):
     --theme-key A,B,C     Given a theme's signal IDs, print its composite sort
                           key — `max_importance`, `count`, `max_updated_seq` —
                           so themes can be ordered without hand-computing.
-    --landscape-survivors Cross-reference the prior `marlin_landscape.json`
+    --landscape-survivors Cross-reference the prior `ambyt_landscape.json`
                           against state, reporting which referenced IDs
                           survived, were retired, or were trimmed from the
                           rolling window.
     --archive             Read mode over the local archive (everything
                           sync.py has ever evicted from the rolling window —
-                          see marlin_archive/<YYYY-MM>.jsonl), instead of
-                          marlin_state.json. Reads every monthly file,
+                          see ambyt_archive/<YYYY-MM>.jsonl), instead of
+                          ambyt_state.json. Reads every monthly file,
                           de-duplicates by signal `id` (keeping the entry with
                           the newest `archived_at`, since a retried sync can
                           append a duplicate), and prints one
@@ -159,13 +159,13 @@ from pathlib import Path
 
 from params import DEADLINE_TAIL_DAYS, RADAR_HORIZON_DAYS, URGENT_CAP
 
-# Resolve the state directory the same way sync.py does (MARLIN_STATE_DIR, else
-# ~/.marlin) so reads find what sync.py wrote regardless of cwd. `--state-dir`
+# Resolve the state directory the same way sync.py does (AMBYT_STATE_DIR, else
+# ~/.ambyt) so reads find what sync.py wrote regardless of cwd. `--state-dir`
 # prints it so the skill can read/write the landscape in the same place.
-STATE_DIR = Path(os.environ.get("MARLIN_STATE_DIR") or (Path.home() / ".marlin")).expanduser()
-STATE_PATH = STATE_DIR / "marlin_state.json"
-LANDSCAPE_PATH = STATE_DIR / "marlin_landscape.json"
-ARCHIVE_DIR = STATE_DIR / "marlin_archive"
+STATE_DIR = Path(os.environ.get("AMBYT_STATE_DIR") or (Path.home() / ".ambyt")).expanduser()
+STATE_PATH = STATE_DIR / "ambyt_state.json"
+LANDSCAPE_PATH = STATE_DIR / "ambyt_landscape.json"
+ARCHIVE_DIR = STATE_DIR / "ambyt_archive"
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -507,7 +507,7 @@ def _validate_date(flag: str, value: str) -> str:
 
 
 def _load_archive(only_months: set[str] | None = None) -> tuple[list[dict], int]:
-    """Read marlin_archive/*.jsonl files, de-duplicated by id.
+    """Read ambyt_archive/*.jsonl files, de-duplicated by id.
 
     Returns (signals, skipped_count). Keeps, per id, the entry with the
     newest `archived_at` — a retried sync can append the same signal twice.
@@ -953,7 +953,7 @@ def main() -> None:
         return
 
     # --archive reads a separate on-disk log (everything ever evicted from the
-    # rolling window), not marlin_state.json — it doesn't touch all_signals.
+    # rolling window), not ambyt_state.json — it doesn't touch all_signals.
     if args.get("archive"):
         archived, skipped = _load_archive()
         if "channel" in args:

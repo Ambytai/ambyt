@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""Marlin sync — mechanical ingestion, stdlib only.
+"""Ambyt sync — mechanical ingestion, stdlib only.
 
-Fetches new signals from the Marlin REST API, merges into marlin_state.json
-in a stable state directory (MARLIN_STATE_DIR, default ~/.marlin/ — NOT the
+Fetches new signals from the Ambyt REST API, merges into ambyt_state.json
+in a stable state directory (AMBYT_STATE_DIR, default ~/.ambyt/ — NOT the
 cwd, so diff-mode survives scheduled runs launched from anywhere), trims to a
 rolling window — archiving any evicted signals first so trimming is never
 outright deletion — and prints a one-line summary. Designed to be invoked by
-the marlin-sync skill so that
+the ambyt-sync skill so that
 the mechanical steps (fetch, page, merge, trim, write) run outside the LLM
 loop and don't pay token cost proportional to payload size.
 
 Credentials (primary path, set by the skill in the child process env):
-    MARLIN_URL           Base URL of the Marlin server.
-    MARLIN_SYNC_GRANT    Short-lived sync grant (sfsg_...) from create_sync_grant.
+    AMBYT_URL           Base URL of the Ambyt server.
+    AMBYT_SYNC_GRANT    Short-lived sync grant (sfsg_...) from create_sync_grant.
 
 Credentials (escape hatch, standalone invocation with a static token):
-    MARLIN_URL           Base URL of the Marlin server.
-    MARLIN_TOKEN         Long-lived static bearer token.
+    AMBYT_URL           Base URL of the Ambyt server.
+    AMBYT_TOKEN         Long-lived static bearer token.
 
 Manual/debug flags (last resort — argv can leak via ps/history):
     --url, --grant, --token
@@ -25,9 +25,9 @@ When a grant is supplied the script hits /sync/signals; when a static token
 is supplied it hits /signals. If both are supplied, grant mode wins and a
 warning goes to stderr.
 
-State files (written in MARLIN_STATE_DIR):
-    marlin_state.json              The rolling window (newest WINDOW signals).
-    marlin_archive/<YYYY-MM>.jsonl Signals evicted from the window on trim,
+State files (written in AMBYT_STATE_DIR):
+    ambyt_state.json              The rolling window (newest WINDOW signals).
+    ambyt_archive/<YYYY-MM>.jsonl Signals evicted from the window on trim,
                                      one JSON line each (full signal record
                                      plus an added archived_at), appended
                                      monthly — never rewritten. Read this back
@@ -61,10 +61,10 @@ from params import CHANNEL_FLOOR, FLOOR_LIVENESS_DAYS, WINDOW_SIZE
 # from an arbitrary/ephemeral working dir still finds prior state (otherwise it
 # cold-starts every run — re-syncing the whole window and defeating diff mode).
 # inspect.py and validate.py resolve the same directory the same way.
-STATE_DIR = Path(os.environ.get("MARLIN_STATE_DIR") or (Path.home() / ".marlin")).expanduser()
-STATE_PATH = STATE_DIR / "marlin_state.json"
-BACKUP_PATH = STATE_DIR / "marlin_state.json.bak"
-ARCHIVE_DIR = STATE_DIR / "marlin_archive"
+STATE_DIR = Path(os.environ.get("AMBYT_STATE_DIR") or (Path.home() / ".ambyt")).expanduser()
+STATE_PATH = STATE_DIR / "ambyt_state.json"
+BACKUP_PATH = STATE_DIR / "ambyt_state.json.bak"
+ARCHIVE_DIR = STATE_DIR / "ambyt_archive"
 WINDOW = WINDOW_SIZE
 FLOOR = CHANNEL_FLOOR
 PAGE_LIMIT = 100
@@ -110,7 +110,7 @@ def _die_network(detail: str) -> None:
             "-> Code execution -> allowed domains), or run where outbound network "
             "is permitted."
         )
-    _die(f"marlin unreachable: {detail}")
+    _die(f"ambyt unreachable: {detail}")
 
 
 def _fetch_page(
@@ -129,8 +129,8 @@ def _fetch_page(
     except urllib.error.HTTPError as e:
         body = e.read().decode(errors="replace")
         if e.code == 401:
-            _die(f"marlin auth failed: {body}")
-        _die(f"marlin http {e.code}: {body}")
+            _die(f"ambyt auth failed: {body}")
+        _die(f"ambyt http {e.code}: {body}")
     except urllib.error.URLError as e:
         _die_network(str(e.reason))
     except (TimeoutError, OSError) as e:
@@ -283,20 +283,20 @@ def _floored_trim(
 def main() -> None:
     argv = _parse_argv(sys.argv[1:])
 
-    url = (argv.get("url") or os.environ.get("MARLIN_URL") or "").strip()
-    grant = (argv.get("grant") or os.environ.get("MARLIN_SYNC_GRANT") or "").strip()
-    token = (argv.get("token") or os.environ.get("MARLIN_TOKEN") or "").strip()
+    url = (argv.get("url") or os.environ.get("AMBYT_URL") or "").strip()
+    grant = (argv.get("grant") or os.environ.get("AMBYT_SYNC_GRANT") or "").strip()
+    token = (argv.get("token") or os.environ.get("AMBYT_TOKEN") or "").strip()
 
     if not url:
-        _die("MARLIN_URL must be set (or passed via --url)")
+        _die("AMBYT_URL must be set (or passed via --url)")
     if not grant and not token:
         _die(
-            "No credential. Set MARLIN_SYNC_GRANT (primary) or MARLIN_TOKEN "
+            "No credential. Set AMBYT_SYNC_GRANT (primary) or AMBYT_TOKEN "
             "(escape hatch), or pass --grant / --token for manual runs."
         )
     if grant and token:
         print(
-            "warning: both MARLIN_SYNC_GRANT and MARLIN_TOKEN supplied; using grant.",
+            "warning: both AMBYT_SYNC_GRANT and AMBYT_TOKEN supplied; using grant.",
             file=sys.stderr,
         )
 

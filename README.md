@@ -1,12 +1,12 @@
-# Marlin
+# Ambyt
 
 A Claude Code plugin that keeps your local domain-awareness skill up to date.
 
 ## Install
 
 ```
-/plugin marketplace add StartupTheorist/marlin
-/plugin install marlin@marlin
+/plugin marketplace add Ambytai/ambyt
+/plugin install ambyt@ambyt-ai
 ```
 
 Then connect the data connector per your onboarding instructions.

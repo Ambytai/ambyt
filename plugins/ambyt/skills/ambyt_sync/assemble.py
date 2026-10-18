@@ -7,7 +7,7 @@ the quiet ones where sync reports no new signals;
 --pre prints the LLM-facing working set (pure, stdout, writes nothing);
 --finish <draft> validates the membership draft and emits the ordered v3
 skeleton with named prose slots; --finish <draft> --prose <map> injects the
-prose and writes marlin_landscape.json. The model's entire output is the
+prose and writes ambyt_landscape.json. The model's entire output is the
 draft and the prose map — every structured write happens here, in code.
 The pure computation functions at the top are individually unit-tested.
 
@@ -537,14 +537,14 @@ def mandatory_deadline_records(radar: list[dict], ack_statuses: dict[str, str]) 
     return selected
 
 
-STATE_DIR = Path(os.environ.get("MARLIN_STATE_DIR") or (Path.home() / ".marlin")).expanduser()
-STATE_PATH = STATE_DIR / "marlin_state.json"
-LANDSCAPE_PATH = STATE_DIR / "marlin_landscape.json"
+STATE_DIR = Path(os.environ.get("AMBYT_STATE_DIR") or (Path.home() / ".ambyt")).expanduser()
+STATE_PATH = STATE_DIR / "ambyt_state.json"
+LANDSCAPE_PATH = STATE_DIR / "ambyt_landscape.json"
 # The true prior for this window, preserved across the validate-fix loop: a
 # re-run of the write step must not treat this run's own output as the prior
 # (that collapses the delta baseline onto itself).
-PRIOR_BACKUP_PATH = STATE_DIR / "marlin_landscape.prior.json"
-ARCHIVE_DIR = STATE_DIR / "marlin_archive"
+PRIOR_BACKUP_PATH = STATE_DIR / "ambyt_landscape.prior.json"
+ARCHIVE_DIR = STATE_DIR / "ambyt_archive"
 
 
 def _atomic_write_json(path: Path, payload: dict) -> None:

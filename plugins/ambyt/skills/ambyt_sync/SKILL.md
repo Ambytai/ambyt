@@ -1,25 +1,25 @@
 ---
-name: marlin-sync
-description: Sync recent Marlin signals into local state and landscape files for ambient domain awareness. Use on a schedule, when the user asks what's new, when marlin_state.json is stale, or when the user responds to surfaced signals — done, not relevant, noted.
+name: ambyt-sync
+description: Sync recent Ambyt signals into local state and landscape files for ambient domain awareness. Use on a schedule, when the user asks what's new, when ambyt_state.json is stale, or when the user responds to surfaced signals — done, not relevant, noted.
 last_updated: 2026-08-11  # bump on every edit — scheduled runs stamp this into their log to detect stale-skill runs
 ---
 
-# Marlin Sync
+# Ambyt Sync
 
-Fetch recent signals from Marlin and write them to local state files so you have ambient awareness of what's happening in your domain without needing to search.
+Fetch recent signals from Ambyt and write them to local state files so you have ambient awareness of what's happening in your domain without needing to search.
 
-The landscape build is a **mechanical pipeline with two small LLM turns**. Code (`assemble.py`) computes everything computable — carryover, clustering, ordering, trend, urgents, notables, entities, deltas — and you supply exactly two things: a **membership draft** (which signals belong to which theme) and a **prose map** (summaries and "why" lines). You never write or edit `marlin_landscape.json` by hand; the tooling writes it, and `validate.py` backstops the result.
+The landscape build is a **mechanical pipeline with two small LLM turns**. Code (`assemble.py`) computes everything computable — carryover, clustering, ordering, trend, urgents, notables, entities, deltas — and you supply exactly two things: a **membership draft** (which signals belong to which theme) and a **prose map** (summaries and "why" lines). You never write or edit `ambyt_landscape.json` by hand; the tooling writes it, and `validate.py` backstops the result.
 
 ## When to run
 
 - On a recurring schedule (e.g., every 30-60 minutes via a scheduled task).
 - When the user asks you to check for updates.
-- At the start of a session if `marlin_state.json` is stale (check `last_sync`).
+- At the start of a session if `ambyt_state.json` is stale (check `last_sync`).
 
 ## Prerequisites
 
-- **Marlin MCP connection** — your MCP host must have the Marlin server connected (either the remote `/mcp` endpoint or the stdio adapter). The mint step below calls an MCP tool; the payload fetch is delegated to a subprocess so large payloads never hit the LLM context.
-- **MCP tools exposed by Marlin**: `create_sync_grant`, `list_channels`, `get_signal`, `get_signals`. If `create_sync_grant` isn't available, tell the user to update their Marlin server — grants are the primary credential path.
+- **Ambyt MCP connection** — your MCP host must have the Ambyt server connected (either the remote `/mcp` endpoint or the stdio adapter). The mint step below calls an MCP tool; the payload fetch is delegated to a subprocess so large payloads never hit the LLM context.
+- **MCP tools exposed by Ambyt**: `create_sync_grant`, `list_channels`, `get_signal`, `get_signals`. If `create_sync_grant` isn't available, tell the user to update their Ambyt server — grants are the primary credential path.
 
 ## Sync
 
@@ -27,7 +27,7 @@ The landscape build is a **mechanical pipeline with two small LLM turns**. Code 
 
    ```json
    {
-     "base_url": "https://marlin.example.com",
+     "base_url": "https://ambyt.example.com",
      "grant": "sfsg_<opaque>",
      "expires_at": "2026-04-17T20:15:00Z"
    }
@@ -41,28 +41,28 @@ The landscape build is a **mechanical pipeline with two small LLM turns**. Code 
 
    *Skill directory.* The path in this skill's header is a *host* path that may not exist inside a sandboxed runtime — e.g. **Cowork mounts the plugin elsewhere than the header reports**, so blindly using the header path fails with file-not-found. Resolve it:
    - Try the directory this `SKILL.md` was loaded from. If `sync.py` exists there, use it.
-   - Otherwise locate the script, scoping the search to likely roots first to avoid a full-filesystem scan: `find "$HOME" /sessions /workspace -path '*/marlin_sync/sync.py' 2>/dev/null | head -1`; only if that returns nothing, fall back to `find / -path '*/marlin_sync/sync.py' 2>/dev/null | head -1`. Use the directory containing the result.
+   - Otherwise locate the script, scoping the search to likely roots first to avoid a full-filesystem scan: `find "$HOME" /sessions /workspace -path '*/ambyt_sync/sync.py' 2>/dev/null | head -1`; only if that returns nothing, fall back to `find / -path '*/ambyt_sync/sync.py' 2>/dev/null | head -1`. Use the directory containing the result.
    - In sandboxed hosts where the **Read tool** can't open files at the resolved path (e.g. Cowork `/sessions/...`), read the scripts via the shell (`cat <skill-dir>/sync.py`) instead.
    - Cache that `<skill-dir>` for all `sync.py` / `assemble.py` / `inspect.py` / `validate.py` calls this run.
 
-   *State directory.* Run `python <skill-dir>/inspect.py --state-dir` and cache the result as `<state-dir>`. This is where `marlin_state.json` (raw rolling window), `marlin_landscape.json` (synthesized view), and `marlin_archive/` (evicted-signal history) live — a **stable** location (default `~/.marlin/`, override with `MARLIN_STATE_DIR`), deliberately **not** the cwd, so prior state and landscape survive a run launched from any working directory (e.g. a scheduled run, whose cwd is arbitrary). The scripts resolve state themselves.
+   *State directory.* Run `python <skill-dir>/inspect.py --state-dir` and cache the result as `<state-dir>`. This is where `ambyt_state.json` (raw rolling window), `ambyt_landscape.json` (synthesized view), and `ambyt_archive/` (evicted-signal history) live — a **stable** location (default `~/.ambyt/`, override with `AMBYT_STATE_DIR`), deliberately **not** the cwd, so prior state and landscape survive a run launched from any working directory (e.g. a scheduled run, whose cwd is arbitrary). The scripts resolve state themselves.
 
-   **Persistence check on sandboxed hosts.** The default `~/.marlin/` is correct for long-lived hosts (a laptop, server, or cron box). But on an **ephemeral sandbox** the resolved `<state-dir>` may sit under a teardown-on-exit home — e.g. Cowork resolves it to `/sessions/<id>/.marlin`, which is **wiped between sessions**, so every scheduled run there cold-starts. If `<state-dir>` looks like a temporary sandbox path **and** a mounted/persistent folder is available (e.g. the user's project folder), set `MARLIN_STATE_DIR` to that folder before invoking the scripts so state actually carries over. When in doubt, ask the user where state should persist.
+   **Persistence check on sandboxed hosts.** The default `~/.ambyt/` is correct for long-lived hosts (a laptop, server, or cron box). But on an **ephemeral sandbox** the resolved `<state-dir>` may sit under a teardown-on-exit home — e.g. Cowork resolves it to `/sessions/<id>/.ambyt`, which is **wiped between sessions**, so every scheduled run there cold-starts. If `<state-dir>` looks like a temporary sandbox path **and** a mounted/persistent folder is available (e.g. the user's project folder), set `AMBYT_STATE_DIR` to that folder before invoking the scripts so state actually carries over. When in doubt, ask the user where state should persist.
 
-   Spawn it with `MARLIN_URL=<base_url>` and `MARLIN_SYNC_GRANT=<grant>` set **only in the subprocess environment** (not exported in your own shell, not on argv). Example in Python:
+   Spawn it with `AMBYT_URL=<base_url>` and `AMBYT_SYNC_GRANT=<grant>` set **only in the subprocess environment** (not exported in your own shell, not on argv). Example in Python:
 
    ```python
    import subprocess
    subprocess.run(
        ["python", "<skill-dir>/sync.py"],
-       env={"MARLIN_URL": base_url, "MARLIN_SYNC_GRANT": grant, "PATH": os.environ["PATH"]},
+       env={"AMBYT_URL": base_url, "AMBYT_SYNC_GRANT": grant, "PATH": os.environ["PATH"]},
        check=True,
    )
    ```
 
-   Bash equivalent for inline invocation: `MARLIN_URL=... MARLIN_SYNC_GRANT=... python <skill-dir>/sync.py` (the leading assignments scope the vars to the single command, not your session).
+   Bash equivalent for inline invocation: `AMBYT_URL=... AMBYT_SYNC_GRANT=... python <skill-dir>/sync.py` (the leading assignments scope the vars to the single command, not your session).
 
-   The script reads/writes `marlin_state.json` in `<state-dir>`, fetches new signals via the REST API, pages as needed, merges, trims to the rolling window of 100, and writes the state file. The trim reserves a per-channel floor so a high-volume channel cannot evict a low-volume channel to zero; before any trim actually drops a signal, it is appended to the local monthly archive (`<state-dir>/marlin_archive/YYYY-MM.jsonl`), so trimming is never outright deletion. All mechanical — no LLM judgment required. (Window size, floor, and every other tuning knob live in `params.py`; `python <skill-dir>/params.py` prints them. They are designer-owned — never change them for a user.)
+   The script reads/writes `ambyt_state.json` in `<state-dir>`, fetches new signals via the REST API, pages as needed, merges, trims to the rolling window of 100, and writes the state file. The trim reserves a per-channel floor so a high-volume channel cannot evict a low-volume channel to zero; before any trim actually drops a signal, it is appended to the local monthly archive (`<state-dir>/ambyt_archive/YYYY-MM.jsonl`), so trimming is never outright deletion. All mechanical — no LLM judgment required. (Window size, floor, and every other tuning knob live in `params.py`; `python <skill-dir>/params.py` prints them. They are designer-owned — never change them for a user.)
 
    It prints one line to stdout:
    ```
@@ -72,7 +72,7 @@ The landscape build is a **mechanical pipeline with two small LLM turns**. Code 
 
    On any error (auth failure, server unreachable, etc.) it exits non-zero with the error on stderr. Surface the stderr message to the user and stop — do not attempt to recover in the agent loop. For an expired-grant error, mint a fresh grant and retry once.
 
-3. **Stop only if nothing changed — including by the passage of time.** When both the new and re-updated counts are 0, run `python <skill-dir>/assemble.py --gate` (cheap, reads only, writes nothing). It reports `"stale": false` or `"stale": true` with the evidence: pending ack transitions (an expiry that just happened), a deadline that newly entered the mandatory band, an acknowledged deadline entering its final-nag window, or an expired tail not yet shown once. If the gate says `false`, stop: `last_sync` was refreshed and no landscape update is needed — **leave `marlin_landscape.json` untouched, including its `as_of`** (`as_of` records *when the landscape content was synthesized*, not when you last polled; a stale `as_of` on a skip run is correct, not a bug). If the gate says `true`, run the landscape update below even though no signals arrived — time alone changed what the landscape should say, and the run is usually trivial (carryover everything, keep all prose).
+3. **Stop only if nothing changed — including by the passage of time.** When both the new and re-updated counts are 0, run `python <skill-dir>/assemble.py --gate` (cheap, reads only, writes nothing). It reports `"stale": false` or `"stale": true` with the evidence: pending ack transitions (an expiry that just happened), a deadline that newly entered the mandatory band, an acknowledged deadline entering its final-nag window, or an expired tail not yet shown once. If the gate says `false`, stop: `last_sync` was refreshed and no landscape update is needed — **leave `ambyt_landscape.json` untouched, including its `as_of`** (`as_of` records *when the landscape content was synthesized*, not when you last polled; a stale `as_of` on a skip run is correct, not a bug). If the gate says `true`, run the landscape update below even though no signals arrived — time alone changed what the landscape should say, and the run is usually trivial (carryover everything, keep all prose).
 
 ## Landscape update (when new or re-updated signals arrived)
 
@@ -99,7 +99,7 @@ Five steps: **`--pre` → your membership draft → `--finish` → your prose ma
    - Do **not** order themes, assign trend, pick urgents or notables, or build entity lists. The finish step computes all of that.
    - Report in conversation how many signals were left unthemed whenever the number is large — the reader should know what the landscape isn't narrating.
 
-6. **Write the draft** (`<state-dir>/draft.json`) — one object, channels to theme lists. `draft.json` and `prose.json` are **fixed working-file names that every run overwrites** — never version them (`draft2.json`), and ignore or delete any pre-assemble legacy files you find in the state dir (`triage_*.json`, hand-rolled maps); only `marlin_state.json`, `marlin_landscape.json`, `marlin_acks*.{json,jsonl}`, and `marlin_archive/` persist meaningfully between runs.
+6. **Write the draft** (`<state-dir>/draft.json`) — one object, channels to theme lists. `draft.json` and `prose.json` are **fixed working-file names that every run overwrites** — never version them (`draft2.json`), and ignore or delete any pre-assemble legacy files you find in the state dir (`triage_*.json`, hand-rolled maps); only `ambyt_state.json`, `ambyt_landscape.json`, `ambyt_acks*.{json,jsonl}`, and `ambyt_archive/` persist meaningfully between runs.
 
    ```json
    {
@@ -129,7 +129,7 @@ Five steps: **`--pre` → your membership draft → `--finish` → your prose ma
    }
    ```
 
-9. **Run `python <skill-dir>/assemble.py --finish <draft.json> --prose <prose.json>`.** It injects your prose and writes `<state-dir>/marlin_landscape.json` itself. You never write the file.
+9. **Run `python <skill-dir>/assemble.py --finish <draft.json> --prose <prose.json>`.** It injects your prose and writes `<state-dir>/ambyt_landscape.json` itself. You never write the file.
 
 10. **Validate, then fix.** Run `python <skill-dir>/validate.py`. It checks the written landscape against the full rule set (schema shape, ordering, caps, exclusivity, entity completeness, referential integrity, the mandatory-deadline rule — it reads the archive too). `OK` (exit 0) means done. On violations, fix the draft or prose and re-run the pipeline from the failing input — bounded to a few attempts; if a violation won't clear, surface it to the user. **`validate.py` is the executable spec**: if any rule here reads ambiguous, its checks are the source of truth.
 
@@ -160,7 +160,7 @@ Field notes for consumers: `trend` is computed from member ages and measures **s
 
 ## Acknowledgements — recording what the user has seen or handled
 
-The pipeline is no longer one-way: a per-signal disposition store (`<state-dir>/marlin_acks.json`) lets what the user *does* about a signal change what gets pushed at them next. You record dispositions with `ack.py`; code applies every suppression rule — you never decide what to hide.
+The pipeline is no longer one-way: a per-signal disposition store (`<state-dir>/ambyt_acks.json`) lets what the user *does* about a signal change what gets pushed at them next. You record dispositions with `ack.py`; code applies every suppression rule — you never decide what to hide.
 
 **When the user responds to surfaced signals, map their language to a disposition — this is a fixed rule, not a judgment call:**
 
@@ -191,16 +191,16 @@ Each run first mints a fresh grant via MCP, then spawns `sync.py` with the grant
 **First sync (cold start, no state file yet):**
 
 ```
-MARLIN_URL=<base> MARLIN_SYNC_GRANT=<grant> python <skill-dir>/sync.py
+AMBYT_URL=<base> AMBYT_SYNC_GRANT=<grant> python <skill-dir>/sync.py
 synced 47 new, 0 re-updated, 0 superseded, cursor=seq:47, last_new_signal_at=2026-04-17T19:22:05Z
 ```
 
-After this: `marlin_state.json` exists with 47 signals. The agent runs the five-step landscape pipeline cold-start (everything arrives unthemed; cluster candidates propose the first themes).
+After this: `ambyt_state.json` exists with 47 signals. The agent runs the five-step landscape pipeline cold-start (everything arrives unthemed; cluster candidates propose the first themes).
 
 **Steady-state poll, nothing changed:**
 
 ```
-MARLIN_URL=<base> MARLIN_SYNC_GRANT=<grant> python <skill-dir>/sync.py
+AMBYT_URL=<base> AMBYT_SYNC_GRANT=<grant> python <skill-dir>/sync.py
 synced 0 new, 0 re-updated, 0 superseded, cursor=seq:47, last_new_signal_at=2026-04-17T19:22:05Z
 ```
 
@@ -209,37 +209,37 @@ After this: `last_sync` refreshed, signals untouched, landscape step skipped.
 **Post-gap resync (one week later):**
 
 ```
-MARLIN_URL=<base> MARLIN_SYNC_GRANT=<grant> python <skill-dir>/sync.py
+AMBYT_URL=<base> AMBYT_SYNC_GRANT=<grant> python <skill-dir>/sync.py
 synced 63 new, 4 re-updated, 2 superseded, archived 21, cursor=seq:110, last_new_signal_at=2026-04-24T08:11:22Z
 ```
 
 After this: the newest 100 signals are in state (21 evicted ones archived first, not deleted). The agent runs the pipeline: `--pre` surfaces the carryover and the 63 arrivals; the draft places them; `--finish` + prose + write + validate.
 
-**Error (grant expired mid-run):** stderr shows `marlin auth failed: …`, exit 1 → mint a fresh grant via `create_sync_grant` and retry once.
+**Error (grant expired mid-run):** stderr shows `ambyt auth failed: …`, exit 1 → mint a fresh grant via `create_sync_grant` and retry once.
 
-**Error (server unreachable):** stderr shows `marlin unreachable: …`, exit 1 → surface the message to the user and stop.
+**Error (server unreachable):** stderr shows `ambyt unreachable: …`, exit 1 → surface the message to the user and stop.
 
 ## Escape hatch: static token for standalone runs
 
 If you need to run `sync.py` outside an agent session — cron on a box without a live MCP connection, CI jobs, ad-hoc shell usage — the script still accepts a long-lived static token:
 
 ```
-MARLIN_URL=<base> MARLIN_TOKEN=<static_token> python <skill-dir>/sync.py
+AMBYT_URL=<base> AMBYT_TOKEN=<static_token> python <skill-dir>/sync.py
 ```
 
-Static tokens hit `/signals` instead of `/sync/signals` and are not revocable per-run. Use grants (the primary path above) whenever an MCP session is present. Don't set `MARLIN_TOKEN` in your default shell environment — it will trip the dual-credential warning and defeat the revocability benefit.
+Static tokens hit `/signals` instead of `/sync/signals` and are not revocable per-run. Use grants (the primary path above) whenever an MCP session is present. Don't set `AMBYT_TOKEN` in your default shell environment — it will trip the dual-credential warning and defeat the revocability benefit.
 
 ## Using the synced data
 
 After syncing, use the three-layer pattern for any downstream work:
 
-1. **Start with `marlin_landscape.json`** (if present) — **channel-keyed**: each `channels.<id>` holds that channel's `summary`, `urgent_signals`, themes, notables, and entities. Pick the channel relevant to the task, or scan across channels for breadth. The `delta` block says what moved since the prior snapshot. Gives you the shape of the domain in a few hundred tokens.
+1. **Start with `ambyt_landscape.json`** (if present) — **channel-keyed**: each `channels.<id>` holds that channel's `summary`, `urgent_signals`, themes, notables, and entities. Pick the channel relevant to the task, or scan across channels for breadth. The `delta` block says what moved since the prior snapshot. Gives you the shape of the domain in a few hundred tokens.
 2. **Use `inspect.py` for triage** — when you need more detail than the landscape but less than full records, run `python <skill-dir>/inspect.py` (add `--channel <id>` to focus, `--by-channel` to group, `--since-seq <N>` for arrivals, `--deadlines` for the radar — its default view hides `handled` items; `--all` shows everything with status tags — `--urgent-top` for the urgent set). Compact, always fits, newest first. These remain available as ad-hoc/debug views; the landscape pipeline no longer requires them.
 3. **Drill selectively** — for specific signals you're citing, prefer `python <skill-dir>/inspect.py --ids sig_A,sig_B` for full `what_changed` / `why_it_matters` without parsing the state file.
 
 **The drill ladder — what a signal id is for.** Every id in the landscape can be walked four steps deep, each adding detail: **(1)** the landscape entry itself → **(2)** the full local record via `inspect.py --ids` (state, zero network) → **(3)** the source cluster — URLs, snippets, provenance — via MCP `get_signal(id)`, which is the specific purpose of a remote deep pull → **(4)** fetching the raw source content itself. The server keeps the full corpus, so `get_signal` resolves *any* id forever, including ones long gone from your window; locally, `inspect.py --ids` reads state first and **falls back to the archive automatically**, so one flag resolves current, superseded, and archived ids alike.
 
-**The archive is the recall layer** — a signal that fell out of the rolling window still exists in `<state-dir>/marlin_archive/`. Query it in slices with `python <skill-dir>/inspect.py --archive [--ids …] [--entity X] [--signal-type T] [--since YYYY-MM-DD] [--until YYYY-MM-DD]`; never read the `.jsonl` files wholesale into context. The archive now has two *proactive* readers — the deadline radar (an approaching date resurfaces from the archive on its own, and the finish step forces near deadlines into `urgent_signals` automatically) and theme birth clustering (a slow-building storyline forms across window + archive) — so history is consulted without the user having to ask.
+**The archive is the recall layer** — a signal that fell out of the rolling window still exists in `<state-dir>/ambyt_archive/`. Query it in slices with `python <skill-dir>/inspect.py --archive [--ids …] [--entity X] [--signal-type T] [--since YYYY-MM-DD] [--until YYYY-MM-DD]`; never read the `.jsonl` files wholesale into context. The archive now has two *proactive* readers — the deadline radar (an approaching date resurfaces from the archive on its own, and the finish step forces near deadlines into `urgent_signals` automatically) and theme birth clustering (a slow-building storyline forms across window + archive) — so history is consulted without the user having to ask.
 
 Guidance:
 
@@ -250,4 +250,4 @@ Guidance:
 - **Attribute interested-party claims.** A signal carrying `interested_party: true` (visible in the working set and full records) makes claims about a market or competitor the publisher has a stake in — vendor research asserting a rival's decline, for example. Present it *attributed*, never as neutral market data: "Meta-published research claims…", not "Google's share fell…". Ordinary self-announcements (a vendor's own product/API/pricing news) don't carry the flag — first-party news is the authoritative case.
 - When the user asks "what's new in AI?", start with `channels.ai_builder`'s `summary` and themes; drill only if they ask for more.
 - The `handling` field (in the triage index) suggests urgency: `urgent` and `brief` are likely worth surfacing; `watch` and `background` are for passive awareness.
-- Avoid Reading `marlin_state.json` top-to-bottom. After a cold-start sync it can exceed the Read tool's context cap.
+- Avoid Reading `ambyt_state.json` top-to-bottom. After a cold-start sync it can exceed the Read tool's context cap.
